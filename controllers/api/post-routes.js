@@ -7,17 +7,18 @@ const sequelize = require('../../config/connection')
 router.get('/', (req, res) => {
     console.log('======================');
     Post.findAll({
-      order: [['created_at', 'DESC']],
+      
       // Query configuration
       attributes: [
         'id', 
         'post_url', 
         'title', 
         'created_at',
-        [sequelize.literal('SELECT COUNT (*) FROM vote WHERE post.id = vote.post_id)'),
+        [sequelize.literal('(SELECT COUNT (*) FROM vote WHERE post.id = vote.post_id)'),
         'vote_count']
       ],
       //this determines the sort/order in which posts will appear
+      order: [['created_at', 'DESC']],
       include: [
         {
           model: Comment,
@@ -50,7 +51,10 @@ router.get('/', (req, res) => {
         'post_url', 
         'title', 
         'created_at', 
-        [sequelize.literal('(SELECT COUNT(*) FROM vote WHERE post.id = vote.post_id)'), 'vote_count']
+        [
+          sequelize.literal('(SELECT COUNT(*) FROM vote WHERE post.id = vote.post_id)'),
+          'vote_count'
+        ]
     ],
     include: [
       {
@@ -96,8 +100,8 @@ router.get('/', (req, res) => {
   //this will accept the votes from users
   router.put('/upvote', (req, res) => {
     //use the custom static method in models/Post.js
-    Post.upvote(req.body, { Vote })
-    .then(updatedPostData => res.json(updatedPostData))
+    Post.upvote(req.body, { Vote, Comment, User })
+    .then(updatedVoteData => res.json(updatedVoteData))
     .catch(err => {
       console.log(err);
       res.status(400).json(err);
