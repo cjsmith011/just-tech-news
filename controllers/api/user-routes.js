@@ -61,7 +61,16 @@ router.post('/', (req, res) => {
     email: req.body.email,
     password: req.body.password
   })
-    .then(dbUserData => res.json(dbUserData))
+  //connect to the sessions and cookies with this 
+    .then(dbUserData => {
+      req.session.save(() => {
+        req.session.user_id = dbUserData.id;
+        req.session.username = dbUserData.username;
+        req.session.loggedIn = true;
+      
+        res.json(dbUserData);
+    });
+  })
     .catch(err => {
       console.log(err);
       res.status(500).json(err);
@@ -82,16 +91,20 @@ router.post('/login', (req, res) => {
       return;
     }
 
-    //res.json({ user: dbUserData });
-
     //verify user
     const validPassword = dbUserData.checkPassword(req.body.password);
     if (!validPassword) {
       res.status(400).json({ message: 'Incorrect password, try again.' });
       return;
     }
-    res.json({ user: dbUserData, message: 'You are successfully logged in.' });
+    req.session.save(() => {
+      req.session.user_id = dbUserData.id;
+      req.session.username = dbUserData.username;
+      req.session.loggedIn = true;
+      
+      res.json({ user: dbUserData, message: 'You are successfully logged in.' });
   });
+});
 });
 
 // PUT /api/users/1
@@ -140,5 +153,18 @@ router.delete('/:id', (req, res) => {
           res.status(500).json(err);
         });
 });
+
+
+//here is our logout route
+router.post('/logout', (req, res) => {
+  if (req.session.loggedIn) {
+    req.session.destroy(() => {
+      res.status(204).end();
+    });
+  } else {
+    res.status(404).end();
+  }
+});
+
 
 module.exports = router;
